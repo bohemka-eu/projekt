@@ -2,14 +2,11 @@
 # Pterodactyl OBS Control Panel Dockerfile
 # Environment: Node.js + OBS + noVNC
 # Minimum Panel Version: 1.0.0
-# Uses specific commit from private repository
+# Uses specific commit from public repository
 # ----------------------------------
 FROM alpine:3.18
 
-LABEL maintainer="Bohemka.eu <sprava_serveru@bohemka.eu>"
-
-# Enable BuildKit (needed for secrets)
-# syntax=docker/dockerfile:1.4
+LABEL maintainer="Tvùj Jméno <tvoje@email.com>"
 
 # Instalace základních závislostí
 RUN apk add --no-cache --update \
@@ -58,16 +55,18 @@ USER container
 ENV USER=container HOME=/home/container
 WORKDIR /home/container
 
-# Stažení kódu z privátního repozitáøe
-ARG REPO_URL=https://github.com/bohemka-eu/cloud_obs.git
-ARG COMMIT_SHA=1e66cb8
-RUN --mount=type=secret,id=git_token \
-    GIT_TOKEN=$(cat /run/secrets/git_token) && \
-    git clone https://${GIT_TOKEN}@github.com/bohemka-eu/cloud_obs.git /tmp/repo \
-    && cd /tmp/repo \
-    && git checkout ${COMMIT_SHA} \
-    && mv /tmp/repo/* /tmp/repo/.[!.]* /home/container/ 2>/dev/null || true \
-    && rm -rf /tmp/repo
+# Stažení kódu z veøejného repozitáøe
+ARG REPO_URL=https://github.com/bohemka-eu/projekt.git
+ARG COMMIT_SHA=ae83124
+RUN git clone ${REPO_URL} /tmp/repo && \
+    cd /tmp/repo && \
+    git checkout ${COMMIT_SHA} && \
+    echo "Debug: Content of /tmp/repo before move" && \
+    ls -laR /tmp/repo && \
+    mv /tmp/repo/* /tmp/repo/.[!.]* /home/container/ 2>/dev/null || true && \
+    echo "Debug: Content of /home/container after move" && \
+    ls -la /home/container && \
+    rm -rf /tmp/repo
 
 # Vytvoøení adresáøe data a výchozího uzivatele.json
 RUN mkdir -p /home/container/data \
@@ -75,6 +74,14 @@ RUN mkdir -p /home/container/data \
         echo '{"users":[{"username":"admin","password":"Bohemkajede"}]}' > /home/container/data/uzivatele.json; \
     fi \
     && chmod 644 /home/container/data/uzivatele.json
+
+# Fallback pro package.json
+RUN if [ ! -f "/home/container/package.json" ]; then \
+        echo '{"name":"cloud-obs","version":"1.0.0","description":"Cloud OBS control panel","main":"server.js","scripts":{"start":"node server.js"},"dependencies":{"bcrypt":"^5.1.1","cookie-parser":"^1.4.6","dotenv":"^16.4.5","express":"^4.19.2","http-proxy-middleware":"^2.0.6"}}' > /home/container/package.json; \
+    fi
+
+# Instalace Node.js závislostí
+RUN npm install --production
 
 # Fallback pro entrypoint.sh
 RUN if [ ! -f "/home/container/entrypoint.sh" ]; then \
@@ -88,9 +95,9 @@ if [ ! -f "/home/container/data/uzivatele.json" ]; then\n\
     chmod 644 /home/container/data/uzivatele.json\n\
 fi\n\
 echo "Starting Xvfb..."\n\
-Xvfb :99 -screen 0 1920x1080x24 &\n\
+Xvfb :99 -screen 0 1280x720x24 &\n\
 XVFB_PID=$!\n\
-sleep 1\n\
+sleep 2\n\
 if ! kill -0 $XVFB_PID 2>/dev/null; then\n\
     echo "Error: Xvfb failed to start"\n\
     exit 1\n\
@@ -120,11 +127,16 @@ exec /bin/bash' > /home/container/start.sh; \
         chmod +x /home/container/start.sh; \
     fi
 
-# Instalace Node.js závislostí
-RUN npm install --production
+# Fallback pro server.js
+RUN if [ ! -f "/home/container/server.js" ]; then \
+        echo 'const express = require("express");\n\
+const app = express();\n\
+app.get("/", (req, res) => res.send("OBS Control Panel"));\n\
+app.listen(3000, () => console.log("Server running on port 3000"));' > /home/container/server.js; \
+    fi
 
 # Oprávnìní pro skripty
-RUN chmod +x /home/container/start.sh /home/container/entrypoint.sh /home/container/install.sh 2>/dev/null || true
+RUN chmod +x /home/container/start.sh /home/container/entrypoint.sh /home/container/install.sh /home/container/server.js 2>/dev/null || true
 
 # Nastavení portù
 EXPOSE 3000 4455 6080 5900
