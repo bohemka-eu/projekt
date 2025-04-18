@@ -6,7 +6,7 @@
 # ----------------------------------
 FROM alpine:3.18
 
-LABEL maintainer="Tvùj Jméno <tvoje@email.com>"
+LABEL maintainer="Bohemka <sprava_serveru@bohemka.eu>"
 
 # Instalace základních závislostí
 RUN apk add --no-cache --update \
@@ -57,7 +57,7 @@ WORKDIR /home/container
 
 # Stažení kódu z veøejného repozitáøe
 ARG REPO_URL=https://github.com/bohemka-eu/projekt.git
-ARG COMMIT_SHA=ae83124
+ARG COMMIT_SHA=92db166
 RUN git clone ${REPO_URL} /tmp/repo && \
     cd /tmp/repo && \
     git checkout ${COMMIT_SHA} && \
