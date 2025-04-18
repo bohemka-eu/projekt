@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS Control Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #212B33;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background-color: #1D262E;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .navbar img {
+                height: 40px;
+            }
+
+            .navbar h1 {
+                margin: 0;
+                font-size: 24px;
+            }
+
+            .navbar button {
+                background-color: #ff4444;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                cursor: pointer;
+                border-radius: 5px;
+                margin-left: 10px;
+            }
+
+                .navbar button:hover {
+                    background-color: #cc0000;
+                }
+
+        .container {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section {
+            background-color: #292E32;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+            .section h2 {
+                margin-top: 0;
+                color: white;
+            }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+        }
+
+            button.start {
+                background-color: rgba(40, 167, 69, 0.65);
+            }
+
+                button.start:hover {
+                    background-color: #218838;
+                }
+
+            button.stop {
+                background-color: rgba(220, 53, 69, 0.65);
+            }
+
+                button.stop:hover {
+                    background-color: #c82333;
+                }
+
+            button.restart {
+                background-color: rgba(0, 123, 255, 0.65);
+            }
+
+                button.restart:hover {
+                    background-color: #0056b3;
+                }
+
+            button.save {
+                background-color: rgba(255, 215, 0, 0.65);
+            }
+
+                button.save:hover {
+                    background-color: #e6c200;
+                }
+
+            button.open-obs {
+                background-color: rgba(255, 215, 0, 0.65);
+                margin-bottom: 10px;
+                width: 300px;
+            }
+
+                button.open-obs:hover {
+                    background-color: #e6c200;
+                }
+
+        #configContent {
+            width: 100%;
+            height: 200px;
+            margin-top: 10px;
+            background-color: #333;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        #message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+
+            #message.success {
+                background-color: #d4edda;
+                color: #155724;
+            }
+
+            #message.error {
+                background-color: #f8d7da;
+                color: #721c24;
+            }
+
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+
+            .section {
+                flex: 1;
+                min-width: 300px;
+                max-width: 45%;
+            }
+
+            #bohemkaBotSection {
+                display: flex;
+                flex-direction: column;
+            }
+
+                #bohemkaBotSection .config-container {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: row;
+                    gap: 10px;
+                }
+
+                    #bohemkaBotSection .config-container #configContent {
+                        flex: 2;
+                        height: 300px;
+                    }
+
+                    #bohemkaBotSection .config-container .button-group {
+                        flex: 1;
+                        flex-direction: column;
+                        justify-content: flex-start;
+                    }
+        }
+
+        @media (max-width: 767px) {
+            .section {
+                width: 100%;
+            }
+
+            #configContent {
+                height: 150px;
+            }
+
+            button.open-obs {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <img src="logo.png" alt="Logo">
+        <h1>OBS Control Panel</h1>
+        <div>
+            <button onclick="changePassword()">Change Password</button>
+            <button id="resetUserPassword" style="display: none;" onclick="resetUserPassword()">User Password Reset</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </div>
+    <div class="container">
+        <div class="section" id="obsSection">
+            <h2>OBS Control</h2>
+            <button id="vncButton" class="open-obs" style="display: none;" onclick="openVNC()">Open OBS</button>
+            <div class="button-group">
+                <button class="start" onclick="toggleOBS('start')">Start OBS</button>
+                <button class="stop" onclick="toggleOBS('stop')">Stop OBS</button>
+            </div>
+            <div id="obsMessage" class="message"></div>
+        </div>
+        <div class="section" id="bohemkaBotSection">
+            <h2>Bohemka Bot Control</h2>
+            <div class="config-container">
+                <textarea id="configContent"></textarea>
+                <div class="button-group">
+                    <button class="start" onclick="toggleBohemkaBot('start')">Start Bohemka Bot</button>
+                    <button class="stop" onclick="toggleBohemkaBot('stop')">Stop Bohemka Bot</button>
+                    <button class="restart" onclick="toggleBohemkaBot('restart')">Restart Bohemka Bot</button>
+                    <button class="save" onclick="saveConfig()">Save Config</button>
+                </div>
+            </div>
+            <div id="bohemkaMessage" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        // Kontrola přihlášení a role
+        fetch('/login', { method: 'GET', credentials: 'include' })
+            .then(res => res.json().then(data => ({ status: res.status, data })))
+            .then(({ status, data }) => {
+                console.log('fetch /login response:', data, 'status:', status);
+                if (status === 401) {
+                    console.log('Not authenticated, redirecting to login.html');
+                    window.location.href = 'login.html';
+                } else if (status === 200) {
+                    console.log('Authenticated, role:', data.role);
+                    const resetButton = document.getElementById('resetUserPassword');
+                    if (data.role === 'admin') {
+                        console.log('Showing User Password Reset button for admin');
+                        resetButton.style.display = 'inline-block';
+                    } else {
+                        console.log('Hiding User Password Reset button for non-admin');
+                        resetButton.style.display = 'none';
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Error checking login:', err.message);
+                showMessage('obsMessage', 'Error checking login: ' + err.message, 'error');
+            });
+
+        // Reset hesla uživatele
+        async function resetUserPassword() {
+            try {
+                const response = await fetch('/reset-user-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                console.log('resetUserPassword response:', data);
+                showMessage('obsMessage', data.message, response.status === 200 ? 'success' : 'error');
+            } catch (err) {
+                console.error('Error resetting user password:', err.message);
+                showMessage('obsMessage', 'Error resetting user password: ' + err.message, 'error');
+            }
+        }
+
+        // Změna hesla
+        async function changePassword() {
+            const newPassword = prompt('Enter new password:');
+            if (!newPassword) return;
+            try {
+                const response = await fetch('/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPassword }),
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                console.log('changePassword response:', data);
+                showMessage('obsMessage', data.message, response.status === 200 ? 'success' : 'error');
+            } catch (err) {
+                console.error('Error changing password:', err.message);
+                showMessage('obsMessage', 'Error changing password: ' + err.message, 'error');
+            }
+        }
+
+        // Načtení VNC URL
+        let vncUrl = '';
+        fetch('/vnc-url', { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => {
+                console.log('VNC URL fetched:', data.vncUrl);
+                vncUrl = data.vncUrl;
+                const vncButton = document.getElementById('vncButton');
+                vncButton.style.display = 'block';
+            })
+            .catch(err => {
+                console.error('Error loading VNC URL:', err);
+                showMessage('obsMessage', 'Error loading VNC URL: ' + err.message, 'error');
+            });
+
+        // Otevření noVNC
+        function openVNC() {
+            if (vncUrl) {
+                window.open(vncUrl, '_blank');
+            } else {
+                showMessage('obsMessage', 'VNC URL not loaded yet.', 'error');
+            }
+        }
+
+        // Načtení konfigurace Bohemka Bot
+        fetch('/bohemka-bot-config', { credentials: 'include' })
+            .then(res => res.json().then(data => ({ status: res.status, data })))
+            .then(({ status, data }) => {
+                console.log('loadBohemkaConfig response:', data);
+                if (status === 200) {
+                    document.getElementById('configContent').value = data.config || 'No config data available';
+                } else {
+                    showMessage('bohemkaMessage', data.message || 'Failed to load config', 'error');
+                }
+            })
+            .catch(err => {
+                console.error('Error loading config:', err);
+                showMessage('bohemkaMessage', 'Error loading config: ' + err.message, 'error');
+            });
+
+        // Ovládání OBS
+        function toggleOBS(action) {
+            fetch('/toggle-obs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action }),
+                credentials: 'include'
+            })
+                .then(res => res.json().then(data => ({ status: res.status, data })))
+                .then(({ status, data }) => {
+                    console.log('toggleOBS response:', data);
+                    showMessage('obsMessage', data.message, status === 200 ? 'success' : 'error');
+                })
+                .catch(err => {
+                    console.error('Error toggling OBS:', err.message);
+                    showMessage('obsMessage', 'Error: ' + err.message, 'error');
+                });
+        }
+
+        // Ovládání Bohemka Bot
+        function toggleBohemkaBot(action) {
+            fetch('/toggle-bohemka-bot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action }),
+                credentials: 'include'
+            })
+                .then(res => res.json().then(data => ({ status: res.status, data })))
+                .then(({ status, data }) => {
+                    console.log('toggleBohemkaBot response:', data);
+                    showMessage('bohemkaMessage', data.message, status === 200 ? 'success' : 'error');
+                })
+                .catch(err => {
+                    console.error('Error toggling Bohemka Bot:', err.message);
+                    showMessage('bohemkaMessage', 'Error: ' + err.message, 'error');
+                });
+        }
+
+        // Uložení konfigurace
+        function saveConfig() {
+            const configContent = document.getElementById('configContent').value;
+            fetch('/bohemka-bot-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ config: configContent }),
+                credentials: 'include'
+            })
+                .then(res => res.json().then(data => ({ status: res.status, data })))
+                .then(({ status, data }) => {
+                    console.log('saveConfig response:', data);
+                    showMessage('bohemkaMessage', data.message, status === 200 ? 'success' : 'error');
+                })
+                .catch(err => {
+                    console.error('Error saving config:', err.message);
+                    showMessage('bohemkaMessage', 'Error: ' + err.message, 'error');
+                });
+        }
+
+        // Zobrazení zprávy
+        function showMessage(elementId, message, type) {
+            const messageEl = document.getElementById(elementId);
+            messageEl.textContent = message;
+            messageEl.className = 'message ' + type;
+            messageEl.style.display = 'block';
+            setTimeout(() => messageEl.style.display = 'none', 3000);
+        }
+
+        // Odhlášení
+        function logout() {
+            fetch('/logout', {
+                method: 'POST',
+                credentials: 'include'
+            })
+                .then(res => res.json())
+                .then(data => {
+                    console.log('logout response:', data);
+                    window.location.href = 'login.html';
+                })
+                .catch(err => {
+                    console.error('Logout error:', err);
+                    showMessage('obsMessage', 'Error logging out: ' + err.message, 'error');
+                });
+        }
+    </script>
+</body>
+</html>

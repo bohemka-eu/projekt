@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #212B33;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .login-container {
+            background-color: #292E32;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+            .login-container img {
+                height: 60px;
+                margin-bottom: 20px;
+            }
+
+            .login-container h2 {
+                color: white;
+                margin-bottom: 20px;
+            }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background-color: #333;
+            color: white;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: rgba(40, 167, 69, 0.65);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+            button:hover {
+                background-color: #218838;
+            }
+
+        .error {
+            color: #721c24;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <img src="logo.png" alt="Logo">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
+            const formData = new FormData(e.target);
+            const username = formData.get('username');
+            const password = formData.get('password');
+
+            try {
+                console.log(`Sending login request: username=${username}`);
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                console.log('Login response:', data, 'Status:', response.status);
+                if (response.ok) {
+                    console.log('Login successful, waiting before redirect');
+                    setTimeout(() => {
+                        console.log('Redirecting to /');
+                        window.location.replace('/');
+                    }, 500);
+                } else {
+                    errorDiv.textContent = data.message || 'Login failed';
+                    errorDiv.style.display = 'block';
+                    console.log(`Login failed: ${data.message}, status: ${response.status}`);
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Error during login: ' + error.message;
+                errorDiv.style.display = 'block';
+                console.error('Login error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
