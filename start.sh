@@ -12,16 +12,15 @@ VNC_PORT=${VNC_PORT:-5900}
 # Clean up old lock files
 pkill -u container Xvfb || true
 rm -f /tmp/.X99-lock /tmp/.X*-lock
-mkdir -p /tmp/.X11-unix
-chown container:container /tmp/.X11-unix
-chmod 1777 /tmp/.X11-unix
+
+# Start Xvfb
 echo "Starting Xvfb..."
 Xvfb :99 -screen 0 1280x720x24 &
 XVFB_PID=$!
 
 # Wait for Xvfb
 sleep 2
-if ! ps -p $XVFB_PID > /dev/null; then
+if ! kill -0 $XVFB_PID 2>/dev/null; then
     echo "Error: Xvfb failed to start"
     exit 1
 fi
@@ -47,7 +46,7 @@ OBS_PID=$!
 
 # Wait for OBS
 sleep 2
-if ! ps -p $OBS_PID > /dev/null; then
+if ! kill -0 $OBS_PID 2>/dev/null; then
     echo "Error: OBS failed to start"
     exit 1
 fi
@@ -60,7 +59,7 @@ X11VNC_PID=$!
 
 # Wait for x11vnc
 sleep 2
-if ! ps -p $X11VNC_PID > /dev/null; then
+if ! kill -0 $X11VNC_PID 2>/dev/null; then
     echo "Error: x11vnc failed to start"
     cat /home/container/x11vnc.log
     exit 1
@@ -69,12 +68,12 @@ fi
 # Start websockify
 pkill -f "websockify.*$WEBSOCKIFY_PORT" || true
 echo "Starting websockify on port $WEBSOCKIFY_PORT..."
-websockify --web /opt/noVNC "$WEBSOCKIFY_PORT" localhost:"$VNC_PORT" 2>&1 | tee /home/container/websockify.log &
+websockify --web /usr/share/novnc "$WEBSOCKIFY_PORT" localhost:"$VNC_PORT" 2>&1 | tee /home/container/websockify.log &
 WEBSOCKIFY_PID=$!
 
 # Wait for websockify
 sleep 2
-if ! ps -p $WEBSOCKIFY_PID > /dev/null; then
+if ! kill -0 $WEBSOCKIFY_PID 2>/dev/null; then
     echo "Error: websockify failed to start"
     cat /home/container/websockify.log
     exit 1
@@ -82,8 +81,10 @@ fi
 
 # Start Bohemka Bot
 pkill -u container bohemka-bot || true
-echo "Starting Bohemka Bot on port $BOHEMKA_PORT..."
-/usr/local/bin/bohemka-bot --port "$BOHEMKA_PORT" --config /home/container/config.json > /home/container/bohemka-bot.log 2>&1 &
+if [ -f "/home/container/bohemka-bot" ]; then
+    echo "Starting Bohemka Bot on port $BOHEMKA_PORT..."
+    /usr/local/bin/bohemka-bot --port "$BOHEMKA_PORT" --config /home/container/config.json 2>&1 | tee /home/container/bohemka-bot.log &
+fi
 
 # Start Node.js server
 pkill -f "node /home/container/server.js" || true

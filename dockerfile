@@ -20,6 +20,7 @@ RUN apk add --no-cache --update \
     fontconfig \
     sudo \
     shadow \
+    pulseaudio \
     && npm install -g npm@10.8.3 \
     && apk add --no-cache --virtual .build-deps \
     build-base \
@@ -36,12 +37,12 @@ RUN apk add --no-cache python3 py3-pip \
     && pip3 install --no-cache-dir numpy websockify \
     && apk del py3-pip
 
-# Instalace noVNC (statické soubory z GitHubu)
+# Instalace noVNC
 RUN mkdir -p /usr/share/novnc \
     && curl -L https://github.com/novnc/noVNC/archive/refs/tags/v1.5.0.tar.gz | tar -xz -C /usr/share/novnc --strip-components=1 \
     && ln -s /usr/share/novnc/vnc.html /usr/share/novnc/index.html
 
-# Nastavení /tmp/.X11-unix jako root
+# Nastavení /tmp/.X11-unix
 RUN mkdir -p /tmp/.X11-unix \
     && chown root:root /tmp/.X11-unix \
     && chmod 1777 /tmp/.X11-unix
@@ -57,7 +58,7 @@ WORKDIR /home/container
 
 # Stažení kódu z veøejného repozitáøe
 ARG REPO_URL=https://github.com/bohemka-eu/projekt.git
-ARG COMMIT_SHA=92db166
+ARG COMMIT_SHA=358e595
 RUN git clone ${REPO_URL} /tmp/repo && \
     cd /tmp/repo && \
     git checkout ${COMMIT_SHA} && \
@@ -122,8 +123,69 @@ exec ${MODIFIED_STARTUP:-/bin/bash}' > /home/container/entrypoint.sh; \
 # Fallback pro start.sh
 RUN if [ ! -f "/home/container/start.sh" ]; then \
         echo '#!/bin/bash\n\
-echo "Running start.sh"\n\
-exec /bin/bash' > /home/container/start.sh; \
+set -x\n\
+export XDG_RUNTIME_DIR=/run/user/$(id -u container)\n\
+NODE_PORT=${NODE_PORT:-3000}\n\
+WEBSOCKIFY_PORT=${WEBSOCKIFY_PORT:-6080}\n\
+BOHEMKA_PORT=${BOHEMKA_PORT:-3001}\n\
+OBS_WS_PORT=${OBS_WS_PORT:-4455}\n\
+VNC_PORT=${VNC_PORT:-5900}\n\
+pkill -u container Xvfb || true\n\
+rm -f /tmp/.X99-lock /tmp/.X*-lock\n\
+echo "Starting Xvfb..."\n\
+Xvfb :99 -screen 0 1280x720x24 &\n\
+XVFB_PID=$!\n\
+sleep 2\n\
+if ! kill -0 $XVFB_PID 2>/dev/null; then\n\
+    echo "Error: Xvfb failed to start"\n\
+    exit 1\n\
+fi\n\
+echo "Starting PulseAudio..."\n\
+pkill -u container pulseaudio || true\n\
+rm -rf /tmp/pulse-*\n\
+pulseaudio --start &\n\
+echo "Configuring OBS WebSocket on port $OBS_WS_PORT..."\n\
+mkdir -p /home/container/.config/obs-studio/plugin_config/obs-websocket\n\
+echo "{\"ServerEnabled\":true,\"ServerPort\":$OBS_WS_PORT,\"ServerPassword\":null}" > /home/container/.config/obs-studio/plugin_config/obs-websocket/settings.json\n\
+chmod -R 700 /home/container/.config/obs-studio\n\
+echo "Starting OBS..."\n\
+export DISPLAY=:99\n\
+pkill -u container obs || true\n\
+obs --startstreaming --disable-studio-mode --verbose 2>&1 | tee /home/container/.config/obs-studio/logs/obs.log &\n\
+OBS_PID=$!\n\
+sleep 2\n\
+if ! kill -0 $OBS_PID 2>/dev/null; then\n\
+    echo "Error: OBS failed to start"\n\
+    exit 1\n\
+fi\n\
+echo "Starting x11vnc on port $VNC_PORT..."\n\
+pkill -u container x11vnc || true\n\
+x11vnc -display :99 -forever -shared -nopw -noshm -xkb -rfbport "$VNC_PORT" -localhost 2>&1 | tee /home/container/x11vnc.log &\n\
+X11VNC_PID=$!\n\
+sleep 2\n\
+if ! kill -0 $X11VNC_PID 2>/dev/null; then\n\
+    echo "Error: x11vnc failed to start"\n\
+    cat /home/container/x11vnc.log\n\
+    exit 1\n\
+fi\n\
+echo "Starting websockify on port $WEBSOCKIFY_PORT..."\n\
+pkill -f "websockify.*$WEBSOCKIFY_PORT" || true\n\
+websockify --web /usr/share/novnc "$WEBSOCKIFY_PORT" localhost:"$VNC_PORT" 2>&1 | tee /home/container/websockify.log &\n\
+WEBSOCKIFY_PID=$!\n\
+sleep 2\n\
+if ! kill -0 $WEBSOCKIFY_PID 2>/dev/null; then\n\
+    echo "Error: websockify failed to start"\n\
+    cat /home/container/websockify.log\n\
+    exit 1\n\
+fi\n\
+pkill -u container bohemka-bot || true\n\
+if [ -f "/home/container/bohemka-bot" ]; then\n\
+    echo "Starting Bohemka Bot on port $BOHEMKA_PORT..."\n\
+    /usr/local/bin/bohemka-bot --port "$BOHEMKA_PORT" --config /home/container/config.json 2>&1 | tee /home/container/bohemka-bot.log &\n\
+fi\n\
+echo "Starting Node.js server on port $NODE_PORT..."\n\
+pkill -f "node /home/container/server.js" || true\n\
+exec node /home/container/server.js 2>&1 | tee /home/container/server.log' > /home/container/start.sh; \
         chmod +x /home/container/start.sh; \
     fi
 
