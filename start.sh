@@ -1,6 +1,7 @@
 #!/bin/bash
 set -x
 export XDG_RUNTIME_DIR=/run/user/$(id -u container)
+export LIBGL_ALWAYS_SOFTWARE=1
 
 # Use environment variables for ports
 NODE_PORT=${NODE_PORT:-3000}
@@ -24,6 +25,10 @@ if ! kill -0 $XVFB_PID 2>/dev/null; then
     echo "Error: Xvfb failed to start"
     exit 1
 fi
+
+# Start DBUS
+echo "Starting DBUS..."
+dbus-daemon --system --fork
 
 # Start PulseAudio
 pkill -u container pulseaudio || true

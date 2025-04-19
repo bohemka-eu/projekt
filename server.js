@@ -16,7 +16,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Proxy pro noVNC
-app.use('/novnc', express.static('/opt/noVNC', {
+app.use('/novnc', express.static('/usr/share/novnc', {
     setHeaders: (res) => {
         res.set('Cache-Control', 'no-cache');
     }
