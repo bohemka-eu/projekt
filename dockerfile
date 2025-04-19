@@ -8,6 +8,10 @@ FROM alpine:3.18
 
 LABEL maintainer="Bohemka <sprava_serveru@bohemka.eu>"
 
+# Vytvoøení uivatele container pøed inicializací adresáøù
+RUN adduser --disabled-password --home /home/container container \
+    && echo "container ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/container
+
 # Instalace základních závislostí
 RUN apk add --no-cache --update \
     nodejs \
@@ -54,10 +58,6 @@ RUN mkdir -p /usr/share/novnc \
 RUN mkdir -p /tmp/.X11-unix \
     && chown root:root /tmp/.X11-unix \
     && chmod 1777 /tmp/.X11-unix
-
-# Vytvoøení uivatele container
-RUN adduser --disabled-password --home /home/container container \
-    && echo "container ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/container
 
 # Nastavení pracovního adresáøe
 USER container
